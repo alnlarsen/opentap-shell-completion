@@ -1,7 +1,7 @@
+using System.Diagnostics;
 using System.Threading;
 using OpenTap;
 using OpenTap.Cli;
-using OpenTap.Package;
 
 namespace ShellCompletion
 {

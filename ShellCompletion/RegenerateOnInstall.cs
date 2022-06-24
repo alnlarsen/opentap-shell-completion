@@ -1,7 +1,27 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using OpenTap;
 using OpenTap.Package;
 
 namespace ShellCompletion
 {
+    class SubprocessGenerator
+    {
+        public static void Regenerate()
+        {
+            var installDir = Environment.GetEnvironmentVariable("TPM_PARENTPROCESSDIR", EnvironmentVariableTarget.Process);
+            var binary = Path.Combine(installDir, "tap");
+            var opentap = Path.Combine(installDir, "OpenTap.dll");
+
+            if (File.Exists(opentap))
+            {
+                Process.Start(binary, "completion regenerate");
+            }
+        }
+    }
+    
     public class RegenerateOnInstall : ICustomPackageAction
     {
         public int Order()
@@ -11,7 +31,7 @@ namespace ShellCompletion
 
         public bool Execute(PackageDef package, CustomPackageActionArgs customActionArgs)
         {
-            CompletionRegenerator.RegenerateAction(true);
+            SubprocessGenerator.Regenerate();
             return true;
         }
 
@@ -27,7 +47,7 @@ namespace ShellCompletion
 
         public bool Execute(PackageDef package, CustomPackageActionArgs customActionArgs)
         {
-            CompletionRegenerator.RegenerateAction(true);
+            SubprocessGenerator.Regenerate();
             return true;
         }
 

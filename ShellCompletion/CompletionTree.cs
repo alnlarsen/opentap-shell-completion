@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using OpenTap;
 using OpenTap.Cli;
@@ -29,10 +28,10 @@ namespace ShellCompletion
         /// </summary>
         public List<FlagCompletion> FlagCompletions { get; set; } = new List<FlagCompletion>
         {
-            new FlagCompletion() { Name = "__BUILTIN_HELP__", ShortName = "h", LongName = "help", Type = "bool", Description = "Write help information." },
-            new FlagCompletion() { Name = "__BUILTIN_VERBOSE__", ShortName = "v", LongName = "verbose", Type = "bool", Description = "Show verbose/debug-level log messages." },
-            new FlagCompletion() { Name = "__BUILTIN_COLOR__", ShortName = "c", LongName = "color", Type = "bool", Description = "Color messages according to their severity." },
-            new FlagCompletion() { Name = "__BUILTIN_LOG__", ShortName = null, LongName = "log", Type = "string", Description = "Specify log file location. Default is ./SessionLogs" },
+            new FlagCompletion() { Name = "__BUILTIN_HELP__", ShortName = "h", LongName = "help", Type = "System.Boolean", Description = "Write help information." },
+            new FlagCompletion() { Name = "__BUILTIN_VERBOSE__", ShortName = "v", LongName = "verbose", Type = "System.Boolean", Description = "Show verbose/debug-level log messages." },
+            new FlagCompletion() { Name = "__BUILTIN_COLOR__", ShortName = "c", LongName = "color", Type = "System.Boolean", Description = "Color messages according to their severity." },
+            new FlagCompletion() { Name = "__BUILTIN_LOG__", ShortName = null, LongName = "log", Type = "System.String", Description = "Specify log file location. Default is ./SessionLogs" },
         };
 
         public List<CompletionTree> Completions { get; set; } = new List<CompletionTree>();
