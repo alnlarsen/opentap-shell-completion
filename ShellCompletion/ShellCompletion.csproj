@@ -17,4 +17,7 @@
   <ItemGroup>
     <PackageReference Include="OpenTAP" Version="$(OpenTapVersion)" />
   </ItemGroup>
+  <ItemGroup>
+    <OpenTapPackageReference Include="OpenTAP" IncludeAssemblies="**;**/**Newtonsoft.Json.dll" />
+  </ItemGroup>
 </Project>
