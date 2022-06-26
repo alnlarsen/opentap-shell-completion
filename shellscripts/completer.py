@@ -8,6 +8,7 @@ import os
 shell=None
 line=[]
 tapdir=""
+current=0
 
 def print_zsh(jobj):
     words = []
@@ -70,8 +71,17 @@ def parse(args):
         with open(path, "r") as f:
             jobj = json.loads(f.read())
 
+    # Here we keep track of which word we are currently completing.
+    # This is important when candidates have common prefixes:
+    # Example: tap tui, tap tui-pm, and tap tui-result.
+    # This ensures that we can still correct tui to tui-pm by moving the cursor back.
+    i = 0
     if jobj:
         for a in args:
+            i += 1
+            if i >= current:
+                break
+
             sub = jobj["Completions"]
             for comp in sub:
                 if comp["Name"] == a:
@@ -82,9 +92,15 @@ def parse(args):
         handlers[shell](jobj)
 
 if __name__ == "__main__":
+    # the directory of the current tap installation
     tapdir = sys.argv[1]
+    # the shell which the completions should be formatted for
     shell = sys.argv[2]
-    args = sys.argv[3:]
+    # the current word# being completed
+    # subtract 1 since 'tap' is not included
+    current = int(sys.argv[3]) - 1
+    # the current words
+    args = sys.argv[4:]
     line = args
     parse(args)
 

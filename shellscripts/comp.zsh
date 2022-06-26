@@ -1,6 +1,7 @@
 #compdef tap
 
 function trace(){
+  return;
   local nicecounter=0
   local line
   for line in "${(@f)@}"
@@ -11,6 +12,7 @@ function trace(){
 }
 
 _tap_subcommands(){
+  trace "current = $CURRENT"
   local binary="$words[1]"
   local tapdir="$(dirname "$(readlink -f "$(which "$binary")")")"
   local scriptPath="$tapdir/Packages/ShellCompletion/completer.py"
@@ -29,7 +31,7 @@ _tap_subcommands(){
   # hack to populate line
   _arguments '*::arg:->args'
   local -a array_of_lines
-  array_of_lines=("${(@f)$(python "$scriptPath" "$tapdir" zsh $line)}")
+  array_of_lines=("${(@f)$(python "$scriptPath" "$tapdir" zsh $CURRENT $line)}")
   trace "${(@f)array_of_lines}"
   _describe 'command' array_of_lines 
   

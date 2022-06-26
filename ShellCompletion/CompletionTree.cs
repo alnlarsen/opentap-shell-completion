@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -80,8 +81,9 @@ namespace ShellCompletion
                         };
                         root.Completions.Add(comp);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        log.Debug(ex);
                         // this could not be constructed
                         // nothing we can do about it
                     }
@@ -122,7 +124,11 @@ namespace ShellCompletion
             var instance = node.CreateInstance();
             var a = AnnotationCollection.Annotate(instance);
 
-            var lookup = a.Get<IMembersAnnotation>().Members.ToLookup(m => m.Get<IMemberAnnotation>().Member.Name);
+            if (a == null) return;
+
+            var lookup = a?.Get<IMembersAnnotation>()?.Members.ToLookup(m => m.Get<IMemberAnnotation>()?.Member?.Name ?? "");
+            
+            if (lookup == null) return;
 
             var members = node.GetMembers().ToArray();
             foreach (var member in members)
