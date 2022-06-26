@@ -1,18 +1,23 @@
-using System.Diagnostics;
 using System.Threading;
 using OpenTap;
 using OpenTap.Cli;
 
 namespace ShellCompletion
 {
+    public enum BrowsableEnum {
+      [Display("Exclude Unbrowsable")]
+      Exclude,
+      [Display("Include Unbrowsable")]
+      Include,
+    }
     [Display("regenerate", "Write all possible completions in the current installation to $TAP_PATH/.tap-completions.json", Group: "completion")]
-    public class GenerateCompletionTree : ICliAction
+    public class Regenerate : ICliAction
     {
-        [CommandLineArgument("with-unbrowsable", Description = "Include completions for types and arguments with [Browsable(false)].")]
-        public bool WithUnbrowsable { get; set; }
+        [CommandLineArgument("browsable", Description = "Include completions for types and arguments with [Browsable(false)].")]
+        public BrowsableEnum WithUnbrowsable { get; set; }
         public int Execute(CancellationToken cancellationToken)
         {
-            CompletionRegenerator.RegenerateAction(WithUnbrowsable);
+            CompletionRegenerator.RegenerateAction(WithUnbrowsable == BrowsableEnum.Include);
             return 0;
         }
     }

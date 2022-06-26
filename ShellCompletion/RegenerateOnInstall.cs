@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-using OpenTap;
 using OpenTap.Package;
 
 namespace ShellCompletion
@@ -12,6 +10,8 @@ namespace ShellCompletion
         public static void Regenerate()
         {
             var installDir = Environment.GetEnvironmentVariable("TPM_PARENTPROCESSDIR", EnvironmentVariableTarget.Process);
+            if (string.IsNullOrWhiteSpace(installDir))
+              installDir = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
             var binary = Path.Combine(installDir, "tap");
             var opentap = Path.Combine(installDir, "OpenTap.dll");
 

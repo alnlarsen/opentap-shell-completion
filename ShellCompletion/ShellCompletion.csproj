@@ -1,28 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
-    <PropertyGroup>
-        <TargetFrameworkIdentifier></TargetFrameworkIdentifier>
-        <TargetFrameworkVersion></TargetFrameworkVersion>
-        <TargetFramework>netstandard2.0</TargetFramework>
-    </PropertyGroup>
-    
+  <PropertyGroup>
+    <TargetFrameworkIdentifier></TargetFrameworkIdentifier>
+    <TargetFrameworkVersion></TargetFrameworkVersion>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
   <PropertyGroup>
     <OpenTapPackageDefinitionPath>package.xml</OpenTapPackageDefinitionPath>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DEBUG>True</DEBUG>
     <CreateOpenTapPackage>true</CreateOpenTapPackage>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DEBUG>False</DEBUG>
     <CreateOpenTapPackage>true</CreateOpenTapPackage>
   </PropertyGroup>
 
-  <UsingTask
-    TaskName="SetEnvironmentVariableTask"
-    TaskFactory="RoslynCodeTaskFactory"
-    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll" >
+  <UsingTask TaskName="SetEnvironmentVariableTask" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <Name ParameterType="System.String" Required="true" />
       <Value ParameterType="System.String" Required="true" />
@@ -44,8 +41,9 @@
 
   <ItemGroup>
     <PackageReference Include="OpenTAP" Version="$(OpenTapVersion)" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
   <ItemGroup>
-    <OpenTapPackageReference Include="OpenTAP" IncludeAssemblies="**;**/**Newtonsoft.Json.dll" />
+    <OpenTapPackageReference Include="OpenTAP" />
   </ItemGroup>
 </Project>
