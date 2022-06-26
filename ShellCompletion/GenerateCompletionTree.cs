@@ -5,10 +5,10 @@ using OpenTap.Cli;
 namespace ShellCompletion
 {
     public enum BrowsableEnum {
-      [Display("Exclude Unbrowsable")]
-      Exclude,
       [Display("Include Unbrowsable")]
       Include,
+      [Display("Exclude Unbrowsable")]
+      Exclude,
     }
     [Display("regenerate", "Write all possible completions in the current installation to $TAP_PATH/.tap-completions.json", Group: "completion")]
     public class Regenerate : ICliAction

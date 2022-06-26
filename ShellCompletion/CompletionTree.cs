@@ -32,6 +32,7 @@ namespace ShellCompletion
     {
         private static TraceSource log = Log.CreateSource(nameof(CompletionRegenerator));
         public string Name { get; set; }
+        public string Description { get; set; }
         public bool IsTerminal { get; set; } = false;
 
         /// <summary>
@@ -58,7 +59,6 @@ namespace ShellCompletion
                     new FlagCompletion() { Name = "__BUILTIN_VERBOSE__", ShortName = "v", LongName = "verbose", Type = "System.Boolean", Description = "Show verbose/debug-level log messages." },
                     new FlagCompletion() { Name = "__BUILTIN_COLOR__", ShortName = "c", LongName = "color", Type = "System.Boolean", Description = "Color messages according to their severity." },
                     new FlagCompletion() { Name = "__BUILTIN_LOG__", ShortName = null, LongName = "log", Type = "System.String", Description = "Specify log file location. Default is ./SessionLogs" },
-
                 };
             }
 
@@ -75,6 +75,7 @@ namespace ShellCompletion
                         var comp = new CompletionTree(td, withUnbrowsable)
                         {
                             Name = disp?.Name ?? td.Name,
+                            Description = disp?.Description,
                             IsTerminal = true
                         };
                         root.Completions.Add(comp);
@@ -111,6 +112,13 @@ namespace ShellCompletion
 
         public CompletionTree(ITypeData node, bool withUnbrowsable)
         {
+            FlagCompletions = new List<FlagCompletion>(){
+                new FlagCompletion() { Name = "__BUILTIN_HELP__", ShortName = "h", LongName = "help", Type = "System.Boolean", Description = "Write help information." },
+                new FlagCompletion() { Name = "__BUILTIN_VERBOSE__", ShortName = "v", LongName = "verbose", Type = "System.Boolean", Description = "Show verbose/debug-level log messages." },
+                new FlagCompletion() { Name = "__BUILTIN_COLOR__", ShortName = "c", LongName = "color", Type = "System.Boolean", Description = "Color messages according to their severity." },
+                new FlagCompletion() { Name = "__BUILTIN_LOG__", ShortName = null, LongName = "log", Type = "System.String", Description = "Specify log file location. Default is ./SessionLogs" }};
+
+
             var instance = node.CreateInstance();
             var a = AnnotationCollection.Annotate(instance);
 
