@@ -6,8 +6,11 @@ Version: The version of the package. Must be in a semver 2.0 compatible format. 
 For Version the following macro is available (Only works if the project directory is under Git source control):
 $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.Build-PreRelease+CommitHash.BranchName.
 -->
-<Package Name="ShellCompletion" xmlns="http://opentap.io/schemas/package" Version="0.1.0-alpha" OS="Windows,Linux">
-  <Description>This is my OpenTAP plugin package.</Description>
+<Package Name="ShellCompletion" xmlns="http://opentap.io/schemas/package" Version="$(GitVersion)" OS="Windows,Linux,MacOS">
+  <Description>This plugin adds shell completion for zsh, bash, and powershell. Run 'tap completion configure' for instructions!</Description>
+  <Dependencies>
+    <PackageDependency Package="OpenTAP" Version="^9.13.0+a5998b9e" />
+  </Dependencies>
   <Files>
     <File Path="Packages/ShellCompletion/ShellCompletion.dll" SourcePath="ShellCompletion.dll">
       <SetAssemblyInfo Attributes="Version" />

@@ -1,0 +1,34 @@
+name: CI
+
+on: [push]
+
+env:
+  #OPENTAP_COLOR: auto # github messes with the "auto" detection (i.e. it has no effect), and "always" breaks a lot of things
+  OPENTAP_ANSI_COLORS: true
+  OPENTAP_NO_UPDATE_CHECK: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_CONSOLE_ANSI_COLOR: true
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: true
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+         dotnet-version: '6.0.x'
+      - name: Build
+        run: dotnet build -c Release
+      - name: Copy Package
+        run: cp bin/Release/ShellCompletion*.TapPackage .
+      - name: Upload Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          retention-days: 5
+          path: "ShellCompletion*.TapPackage"
