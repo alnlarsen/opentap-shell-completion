@@ -16,5 +16,7 @@ $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.
       <SetAssemblyInfo Attributes="Version" />
     </File>
     <File Path="Packages/ShellCompletion/completer.py" SourcePath="../../python/completer.py" />
+    <File Path="Packages/ShellCompletion/zsh/_tap" SourcePath="../../zsh/_tap" />
+    <File Path="Packages/ShellCompletion/powershell/_tap.ps1" SourcePath="../../powershell/_tap.ps1" />
   </Files>
 </Package>
