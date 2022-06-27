@@ -1,5 +1,10 @@
 #compdef tap
 
+# Alias python to python3 if python3 does not exist
+if ! command -v python3 >&/dev/null; then
+  python3() { python "$@" }
+fi
+
 trace(){
   return
   local nicecounter=0
@@ -17,20 +22,20 @@ _portable_get_real_dirname() {
 
     # relativePath is empty if this is a regular file
     # Otherwise it is a relative path from the link to the real file
-    path="$1"
-    relativePath="$(readlink "$path")"
+    foundPath="$1"
+    relativePath="$(readlink "$foundPath")"
     # Keep looping until the file is resolved to a regular file
     while [[ "$relativePath" ]]; do
       # File is a link; follow it
-      pushd "$(dirname "$path")" >/dev/null
+      pushd "$(dirname "$foundPath")" >/dev/null
       pushd "$(dirname "$relativePath")" >/dev/null
-      path="$(pwd)/$(basename "$0")"
+      foundPath="$(pwd)/$(basename "$0")"
       popd >/dev/null
       popd >/dev/null
-      relativePath="$(readlink "$path")"
+      relativePath="$(readlink "$foundPath")"
     done
 
-    echo "$(dirname "$path")"
+    echo "$(dirname "$foundPath")"
   else
     # We are on linux -- Use GNU Readline normally
     echo "$(dirname "$(readlink -f "$(which "$1")")")"
@@ -59,7 +64,7 @@ _tap_subcommands(){
   _arguments '*::arg:->args'
   trace "line = $line"
   local -a array_of_lines
-  array_of_lines=("${(@f)$(python "$scriptPath" "$tapdir" zsh $CURRENT $line)}")
+  array_of_lines=("${(@f)$(python3 "$scriptPath" "$tapdir" zsh $CURRENT $line)}")
   trace "${(@f)array_of_lines}"
   _describe 'command' array_of_lines 
 
