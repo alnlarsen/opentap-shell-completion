@@ -4,7 +4,7 @@
     </PropertyGroup>
         
     <PropertyGroup>
-        <OpenTapVersion>9.18.2</OpenTapVersion>
+        <OpenTapVersion>9.13.0</OpenTapVersion>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
