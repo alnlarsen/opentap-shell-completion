@@ -18,6 +18,6 @@ $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.
     </File>
   </Files>
   <Files>
-    <File Path="Packages/ShellCompletion/completer.py" SourcePath="../../shellscripts/completer.py" />
+    <File Path="Packages/ShellCompletion/completer.py" SourcePath="../../python/completer.py" />
   </Files>
 </Package>
