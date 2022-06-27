@@ -98,7 +98,7 @@ if __name__ == "__main__":
     shell = sys.argv[2]
     # the current word# being completed
     # subtract 1 since 'tap' is not included
-    current = int(sys.argv[3]) - 1
+    current = int(sys.argv[3])
     # the current words
     args = sys.argv[4:]
     line = args
