@@ -24,6 +24,7 @@ $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.
     </File>
     <File Path="Packages/ShellCompletion/completer.py" SourcePath="../../python/completer.py" />
     <File Path="Packages/ShellCompletion/zsh/_tap" SourcePath="../../zsh/_tap" />
+    <File Path="Packages/ShellCompletion/bash/tap-completion.bash" SourcePath="../../bash/tap-completion.bash" />
     <File Path="Packages/ShellCompletion/powershell/_tap.ps1" SourcePath="../../powershell/_tap.ps1" />
 
     <!-- Platform specific dependencies -->
