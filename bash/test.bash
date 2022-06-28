@@ -2,10 +2,8 @@
 
 source ./tap-completion.bash
 
-declare -a COMP_WORDS
-COMP_WORDS=("tap" "package" "list")
-_tap_complete_fn
 
+COMP_CWORD=2
+_tap_complete_fn tap package list --architecture x
 
-
-
+_buildQuery package list hello wowoow
