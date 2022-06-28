@@ -6,15 +6,16 @@ Version: The version of the package. Must be in a semver 2.0 compatible format. 
 For Version the following macro is available (Only works if the project directory is under Git source control):
 $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.Build-PreRelease+CommitHash.BranchName.
 -->
-<Package Name="ShellCompletion" xmlns="http://opentap.io/schemas/package" Version="$(GitVersion)" OS="Windows,Linux,MacOS">
-  <Description>This plugin adds shell completion for zsh, bash, and powershell.
+<Package Name="ShellCompletion" xmlns="http://opentap.io/schemas/package" Version="$(GitVersion)" OS="$(TargetPlatform)">
+  <Description>
+    This plugin adds shell completion for zsh, bash, and powershell.
     <Status>Active Development</Status>
     <Links>
       <Link Description="Go to the GitHub repository" Name="GitHub Repository" Url="https://github.com/alnlarsen/opentap-shell-completion" />
     </Links>
   </Description>
   <SourceUrl>https://github.com/alnlarsen/opentap-shell-completion</SourceUrl>
-<Dependencies>
+  <Dependencies>
     <PackageDependency Package="OpenTAP" Version="^9.13.0+a5998b9e" />
   </Dependencies>
   <Files>
@@ -24,5 +25,13 @@ $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.
     <File Path="Packages/ShellCompletion/completer.py" SourcePath="../../python/completer.py" />
     <File Path="Packages/ShellCompletion/zsh/_tap" SourcePath="../../zsh/_tap" />
     <File Path="Packages/ShellCompletion/powershell/_tap.ps1" SourcePath="../../powershell/_tap.ps1" />
+
+    <!-- Platform specific dependencies -->
+    <File Path="Packages/ShellCompletion/jq.exe" SourcePath="../../native/jq-win64.exe" Condition="$(TargetPlatform) == Windows" />
+    <File Path="Packages/ShellCompletion/jq" SourcePath="../../native/jq-linux64" Condition="$(TargetPlatform) == Linux" />
+    <File Path="Packages/ShellCompletion/jq" SourcePath="../../native/jq-osx-amd64" Condition="$(TargetPlatform) == MacOS" />
   </Files>
+  <PackageActionExtensions Condition="$(TargetPlatform) != Windows">
+    <ActionStep ActionName="install" ExeFile="chmod" Arguments="+x Packages/ShellCompletion/jq" />
+  </PackageActionExtensions>
 </Package>

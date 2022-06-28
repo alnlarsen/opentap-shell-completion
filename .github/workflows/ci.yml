@@ -10,8 +10,53 @@ env:
   DOTNET_CONSOLE_ANSI_COLOR: true
 
 jobs:
+  GetVersion:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      ShortVersion: ${{ steps.asmVer.outputs.ver }}
+      LongVersion: ${{ steps.longVer.outputs.ver }}
+      GitVersion: ${{ steps.gitVer.outputs.ver }}
+    steps:
+      - name: Create OpenTAP install dir
+        run: mkdir $HOME/.tap
+      - name: Download OpenTAP
+        run: wget -O opentap.TapPackage https://packages.opentap.io/3.0/downloadpackage/OpenTAP?os=linux
+      - name: Unzip
+        run: unzip opentap.TapPackage -d "$HOME/.tap"
+      - name: Change permission
+        run: chmod +x $HOME/.tap/tap
+      - name: Create symlink
+        run: ln -s -f "$HOME/.tap/tap" /usr/local/bin/tap
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Fix tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: git fetch -f origin ${{ github.ref }}:${{ github.ref }} # Fixes an issue with actions/checkout@v2. See https://github.com/actions/checkout/issues/290
+      - name: tap sdk gitversion --fields 3
+        id: asmVer
+        run: |
+          echo ::set-output name=ver::$(tap sdk gitversion --fields 3)
+          echo $(tap sdk gitversion --fields 3)
+      - name: tap sdk gitversion --fields 4
+        id: longVer
+        run: |
+          echo ::set-output name=ver::$(tap sdk gitversion --fields 4)
+          echo $(tap sdk gitversion --fields 4)
+      - name: tap sdk gitversion
+        id: gitVer
+        run: |
+          echo ::set-output name=ver::$(tap sdk gitversion)
+          echo $(tap sdk gitversion)
+
   Build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        TargetPlatform: [Windows, Linux, MacOS]
+    needs: GetVersion
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -23,9 +68,11 @@ jobs:
         with:
          dotnet-version: '6.0.x'
       - name: Build
+        env:
+          TargetPlatform: ${{ matrix.TargetPlatform }}
         run: dotnet build -c Release
       - name: Copy Package
-        run: cp bin/Release/ShellCompletion*.TapPackage .
+        run: cp bin/Release/ShellCompletion*.TapPackage ShellCompletion.${{ needs.GetVersion.outputs.GitVersion }}.${{ matrix.TargetPlatform}}.TapPackage
       - name: Upload Package
         uses: actions/upload-artifact@v3
         with:
