@@ -9,24 +9,23 @@ shell=None
 line=[]
 tapdir=""
 current=0
+WORD_OFFSET=2
 
 def print_zsh(jobj):
-    words = []
-    if len(line) > 0: words += [line[-1]]
-    if len(line) > 1: words += [line[-2]]
+    offset = current - WORD_OFFSET
+    word = line[offset] if offset >= 0 and len(line) > offset else None
 
-    for word in words:
-        if word.startswith("-"):
-            word = word.strip("-")
-            if len(word) == 0: break
-            for flag in jobj["FlagCompletions"]:
-                if flag["ShortName"] == word or flag["LongName"] == word:
-                    suggestions = flag["SuggestedCompletions"]
-                    if suggestions is not None:
-                        for suggestion in suggestions:
-                            if suggestion is not None:
-                                print(suggestion)
-                        return
+    if word is not None and word.startswith("-"):
+        word = word.strip("-")
+        for flag in jobj["FlagCompletions"]:
+            if flag["ShortName"] == word or flag["LongName"] == word:
+                if flag['Type'] == 'System.Boolean': break
+                suggestions = flag["SuggestedCompletions"]
+                if suggestions is not None:
+                    for suggestion in suggestions:
+                        if suggestion is not None:
+                            print(suggestion)
+                return
 
 
     for comp in jobj["Completions"]:
@@ -37,12 +36,21 @@ def print_zsh(jobj):
         else:
             print(f"{n}:{d}")
  
-    for flag in jobj["FlagCompletions"]:
+    flags = jobj["FlagCompletions"]
+    if flags is None or len(flags) == 0:
+        return
+    types = [t['Type'].split('.')[-1] for t in flags]
+    longest = len(max(types, key = len)) + 1
+
+    for flag in flags:
         desc = flag["Description"]
         if desc is None:
             desc=""
         else:
             desc = desc.replace("\n", " ")
+        typestr = flag['Type'].split('.')[-1]
+        typestr = typestr + (longest - len(typestr)) * ' ' + ' -- '
+        desc = f'{typestr}{desc}'
         # desc = quote(desc)
         sn = flag["ShortName"]
         if sn and len(sn) > 0:
