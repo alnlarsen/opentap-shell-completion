@@ -5,19 +5,28 @@ using OpenTap.Package;
 
 namespace ShellCompletion
 {
-    class SubprocessGenerator
+    static class Regenerator
     {
-        public static void Regenerate()
+        static string GetInstallPath()
         {
             var installDir = Environment.GetEnvironmentVariable("TPM_PARENTPROCESSDIR", EnvironmentVariableTarget.Process);
             if (string.IsNullOrWhiteSpace(installDir))
-              installDir = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
-            var binary = Path.Combine(installDir, "tap");
-            var opentap = Path.Combine(installDir, "OpenTap.dll");
+                installDir = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
+            return installDir;
+        }
+        public static void Regenerate()
+        {
+            var installDir = GetInstallPath();
+            var cache = Path.Combine(installDir, ".tap-completions.json");
 
-            if (File.Exists(opentap))
+            try
             {
-                Process.Start(binary, "completion regenerate");
+                if (File.Exists(cache))
+                    File.Delete(cache);
+            }
+            catch
+            {
+                // This is probably ok, and we can't do anything about it anyway
             }
         }
     }
@@ -31,7 +40,7 @@ namespace ShellCompletion
 
         public bool Execute(PackageDef package, CustomPackageActionArgs customActionArgs)
         {
-            SubprocessGenerator.Regenerate();
+            Regenerator.Regenerate();
             return true;
         }
 
@@ -47,7 +56,7 @@ namespace ShellCompletion
 
         public bool Execute(PackageDef package, CustomPackageActionArgs customActionArgs)
         {
-            SubprocessGenerator.Regenerate();
+            Regenerator.Regenerate();
             return true;
         }
 

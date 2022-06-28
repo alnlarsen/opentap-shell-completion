@@ -19,6 +19,7 @@ namespace ShellCompletion
             this.disp = disp;
         }
     }
+
     public class FlagCompletion
     {
         public string Name { get; set; }
@@ -45,6 +46,7 @@ namespace ShellCompletion
         };
 
         public List<CompletionTree> Completions { get; set; } = new List<CompletionTree>();
+
         public static CompletionTree FromActions(TdDisp[] actions, bool withUnbrowsable, string name, bool isTerminal)
         {
             var root = new CompletionTree
@@ -55,7 +57,8 @@ namespace ShellCompletion
 
             if (isTerminal)
             {
-                root.FlagCompletions = new List<FlagCompletion>(){
+                root.FlagCompletions = new List<FlagCompletion>()
+                {
                     new FlagCompletion() { Name = "__BUILTIN_HELP__", ShortName = "h", LongName = "help", Type = "System.Boolean", Description = "Write help information." },
                     new FlagCompletion() { Name = "__BUILTIN_VERBOSE__", ShortName = "v", LongName = "verbose", Type = "System.Boolean", Description = "Show verbose/debug-level log messages." },
                     new FlagCompletion() { Name = "__BUILTIN_COLOR__", ShortName = "c", LongName = "color", Type = "System.Boolean", Description = "Color messages according to their severity." },
@@ -99,6 +102,7 @@ namespace ShellCompletion
                 {
                     member.disp = new DisplayAttribute(member.disp.Name, member.disp.Description, Groups: member.disp.Group.Skip(1).ToArray());
                 }
+
                 var subtree = FromActions(grp.ToArray(), withUnbrowsable, key, false);
                 root.Completions.Add(subtree);
             }
@@ -114,11 +118,13 @@ namespace ShellCompletion
 
         public CompletionTree(ITypeData node, bool withUnbrowsable)
         {
-            FlagCompletions = new List<FlagCompletion>(){
+            FlagCompletions = new List<FlagCompletion>()
+            {
                 new FlagCompletion() { Name = "__BUILTIN_HELP__", ShortName = "h", LongName = "help", Type = "System.Boolean", Description = "Write help information." },
                 new FlagCompletion() { Name = "__BUILTIN_VERBOSE__", ShortName = "v", LongName = "verbose", Type = "System.Boolean", Description = "Show verbose/debug-level log messages." },
                 new FlagCompletion() { Name = "__BUILTIN_COLOR__", ShortName = "c", LongName = "color", Type = "System.Boolean", Description = "Color messages according to their severity." },
-                new FlagCompletion() { Name = "__BUILTIN_LOG__", ShortName = null, LongName = "log", Type = "System.String", Description = "Specify log file location. Default is ./SessionLogs" }};
+                new FlagCompletion() { Name = "__BUILTIN_LOG__", ShortName = null, LongName = "log", Type = "System.String", Description = "Specify log file location. Default is ./SessionLogs" }
+            };
 
 
             var instance = node.CreateInstance();
@@ -127,7 +133,7 @@ namespace ShellCompletion
             if (a == null) return;
 
             var lookup = a?.Get<IMembersAnnotation>()?.Members.ToLookup(m => m.Get<IMemberAnnotation>()?.Member?.Name ?? "");
-            
+
             if (lookup == null) return;
 
             var members = node.GetMembers().ToArray();
@@ -150,6 +156,7 @@ namespace ShellCompletion
                     });
                     continue;
                 }
+
                 if (!withUnbrowsable)
                 {
                     if (member.GetAttribute<BrowsableAttribute>()?.Browsable == false)

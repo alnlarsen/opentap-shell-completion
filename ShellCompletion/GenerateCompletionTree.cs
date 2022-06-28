@@ -4,17 +4,18 @@ using OpenTap.Cli;
 
 namespace ShellCompletion
 {
-    public enum BrowsableEnum {
-      [Display("Include Unbrowsable")]
-      Include,
-      [Display("Exclude Unbrowsable")]
-      Exclude,
+    public enum BrowsableEnum
+    {
+        [Display("Include Unbrowsable")] Include,
+        [Display("Exclude Unbrowsable")] Exclude,
     }
+
     [Display("regenerate", "Write all possible completions in the current installation to $TAP_PATH/.tap-completions.json", Group: "completion")]
     public class Regenerate : ICliAction
     {
         [CommandLineArgument("browsable", Description = "Include completions for types and arguments with [Browsable(false)].")]
         public BrowsableEnum WithUnbrowsable { get; set; }
+
         public int Execute(CancellationToken cancellationToken)
         {
             CompletionRegenerator.RegenerateAction(WithUnbrowsable == BrowsableEnum.Include);
@@ -22,4 +23,3 @@ namespace ShellCompletion
         }
     }
 }
-

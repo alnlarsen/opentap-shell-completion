@@ -15,7 +15,7 @@ namespace ShellCompletion
             if (!withUnbrowsable)
                 actions = actions.Where(a => a.GetAttribute<BrowsableAttribute>()?.Browsable != true);
             var tree = CompletionTree.FromActions(actions.Select(a => new TdDisp(a, a.GetDisplayAttribute()))
-                                                         .ToArray(), withUnbrowsable, "tap", true);
+                .ToArray(), withUnbrowsable, "tap", true);
             var tapPath = Path.GetDirectoryName(PluginManager.GetOpenTapAssembly().Location);
             var savepath = Path.Combine(tapPath, ".tap-completions.json");
             File.WriteAllText(savepath, tree.ToJson());

@@ -7,8 +7,14 @@ For Version the following macro is available (Only works if the project director
 $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.Build-PreRelease+CommitHash.BranchName.
 -->
 <Package Name="ShellCompletion" xmlns="http://opentap.io/schemas/package" Version="$(GitVersion)" OS="Windows,Linux,MacOS">
-  <Description>This plugin adds shell completion for zsh, bash, and powershell. Run 'tap completion configure' for instructions!</Description>
-  <Dependencies>
+  <Description>This plugin adds shell completion for zsh, bash, and powershell.
+    <Status>Active Development</Status>
+    <Links>
+      <Link Description="Go to the GitHub repository" Name="GitHub Repository" Url="https://github.com/alnlarsen/opentap-shell-completion" />
+    </Links>
+  </Description>
+  <SourceUrl>https://github.com/alnlarsen/opentap-shell-completion</SourceUrl>
+<Dependencies>
     <PackageDependency Package="OpenTAP" Version="^9.13.0+a5998b9e" />
   </Dependencies>
   <Files>

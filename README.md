@@ -25,7 +25,7 @@ zsh and bash will require python for some json parsing, but powershell will not 
 One time in the current shell:
 ```zsh
 # source the completions
-source `./zsh/_tap`
+source `./packages/ShellCompletion/zsh/_tap`
 # manually configure the completion hook 
 compdef _tap tap
 ```
@@ -33,3 +33,10 @@ compdef _tap tap
 To automatically load the completions on shell startup, copy `./zsh/_tap`
 to some directory in your `fpath`.
 
+## powershell
+```
+source `./packages/ShellCompletion/powershell/_tap.ps1`
+```
+
+## bash
+* TBD
