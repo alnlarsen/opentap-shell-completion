@@ -4,6 +4,7 @@ function Complete {
         [int] $cursorPosition,
         [string] $wordToComplete
     )
+    $arguments = $arguments | ForEach-Object { $_.Replace('"', '').Replace("'", '') }
     $a = $arguments[0]
     $location = (Get-Childitem (Get-Command $a).Source).Directory.FullName
     $packageXml = "$location/Packages/ShellCompletion/package.xml"
@@ -77,11 +78,13 @@ function Complete {
 
 $scriptBlock = {
     param($wordToComplete, $commandAst, $cursorPosition)    
+    $wordToComplete = $wordToComplete.Replace('"', '').Replace("'", '');
 
     Complete $commandAst.CommandElements $cursorPosition $wordToComplete | 
     Where-Object { $_ -like "$wordToComplete*" } |
-    Foreach-Object {         
-        $_.Contains(' ') ? "`"$_`" " : "$_ "
+    
+    Foreach-Object {
+        $_.Contains(" ") ? "`"$_`" " : "$_ "
     }
 }
 
