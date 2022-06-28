@@ -72,6 +72,4 @@ $scriptBlock = {
     }
 }
 
-$env:PATH = ";C:\Users\allarsen\submarine\tap-shell-completion\bin\Debug;$($env:PATH);"
 Register-ArgumentCompleter -Native -CommandName tap -ScriptBlock $scriptBlock
-Set-PSReadLineOption -EditMode Emacs
