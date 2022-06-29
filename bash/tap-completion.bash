@@ -81,12 +81,7 @@ _portable_get_real_dirname() {
   fi
   local previousWord="${COMP_WORDS[$(($COMP_CWORD - 1))]}"
   if [[ "$previousWord" == -* ]]; then
-    local oldIFS=$IFS
-    # temporarily change IFS to allow spaces in array
-    local IFS='
-    '
     local flagopts=($(echo "$node" | _tap_json ".FlagCompletions[] | select (\"-\" + .ShortName == \"$previousWord\" or \"--\" + .LongName == \"$previousWord\") | [.Type, .SuggestedCompletions[]][] "))
-    IFS="$oldIFS"
 
     # If the current flag is a bool, just continue since it requires no argument
     # otherwise we should only suggest completions for this flag and return
@@ -108,10 +103,10 @@ _portable_get_real_dirname() {
 
   function _tap_completions()
   {
+    local IFS=$'\n'
     local relevant="${COMP_WORDS[@]:0:$((COMP_CWORD))}"
     local word="${COMP_WORDS[$COMP_CWORD]}"
-    local suggestions=($(compgen -o filenames -W  "$(_tap_complete_fn ${relevant[@]})" -- "$word"))
-
+    local suggestions=($(compgen -W  "$(_tap_complete_fn ${relevant[@]})" -- "$word"))
     COMPREPLY+=("${suggestions[@]}")
   }
 
