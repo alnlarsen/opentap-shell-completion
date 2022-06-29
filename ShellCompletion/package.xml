@@ -6,7 +6,7 @@ Version: The version of the package. Must be in a semver 2.0 compatible format. 
 For Version the following macro is available (Only works if the project directory is under Git source control):
 $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.Build-PreRelease+CommitHash.BranchName.
 -->
-<Package Name="ShellCompletion" xmlns="http://opentap.io/schemas/package" Version="$(GitVersion)" OS="$(TargetPlatform)">
+<Package Name="ShellCompletion" xmlns="http://opentap.io/schemas/package" Version="$(GitVersion)" Architecture="$(Architecture)" OS="$(TargetPlatform)">
   <Description>
     This plugin adds shell completion for zsh, bash, and powershell.
     <Status>Active Development</Status>
@@ -28,11 +28,16 @@ $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.
     <File Path="Packages/ShellCompletion/powershell/_tap.ps1" SourcePath="../../powershell/_tap.ps1" />
 
     <!-- Platform specific dependencies -->
-    <File Path="Packages/ShellCompletion/jq.exe" SourcePath="../../native/jq-win64.exe" Condition="$(TargetPlatform) == Windows" />
-    <File Path="Packages/ShellCompletion/jq" SourcePath="../../native/jq-linux64" Condition="$(TargetPlatform) == Linux" />
-    <File Path="Packages/ShellCompletion/jq" SourcePath="../../native/jq-osx-amd64" Condition="$(TargetPlatform) == MacOS" />
+    <File Path="Packages/ShellCompletion/yq.exe" SourcePath="../native/yq_windows_amd64.exe" Condition="$(TargetPlatform) == Windows" />
+    <File Path="Packages/ShellCompletion/yq" SourcePath="../native/yq_linux_amd64" Condition="$(TargetPlatform) == Linux" />
   </Files>
+
+  <Files Condition="$(TargetPlatform) == MacOS">
+    <File Path="Packages/ShellCompletion/yq" SourcePath="../../native/yq_darwin_arm64" Condition="$(Architecture) == arm64" />
+    <File Path="Packages/ShellCompletion/yq" SourcePath="../../native/yq_darwin_amd64" Condition="$(Architecture) == x64" />
+  </Files>
+
   <PackageActionExtensions Condition="$(TargetPlatform) != Windows">
-    <ActionStep ActionName="install" ExeFile="chmod" Arguments="+x Packages/ShellCompletion/jq" />
+    <ActionStep ActionName="install" ExeFile="chmod" Arguments="+x Packages/ShellCompletion/yq" />
   </PackageActionExtensions>
 </Package>

@@ -30,20 +30,17 @@ _portable_get_real_dirname() {
   {
     local binary="$1"
     local tapdir="`_portable_get_real_dirname "$binary"`"
-    local jqPath="$HOME/Downloads/yq_linux_amd64"
-    # local jqPath="$tapdir/Packages/ShellCompletion/jq"
+    local yqPath="$tapdir/Packages/ShellCompletion/yq"
     local cachePath="$tapdir/.tap-completions.json"
 
     shift
 
     _tap_json()
     {
-      # -M: no colors -c: compact (minified)
-      # "${jqPath}" -M -c "$@"
-      "${jqPath}" "$@"
+      "${yqPath}" "$@"
     }
 
-    if [ ! -x "$jqPath" ]; then 
+    if [ ! -x "$yqPath" ]; then 
       # We cannot do anything if jq is not installed. We cannot even give an error.
       # This is probably happening because the plugin is not installed.
       return;
