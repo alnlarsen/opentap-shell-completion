@@ -23,62 +23,58 @@ _portable_get_real_dirname() {
   else
     # We are on linux -- Use GNU Readline normally
     echo "$(dirname "$(readlink -f "$(which "$1")")")"
-    fi
+  fi
+}
+
+_tap_complete_fn () {
+  local binary="$1"
+  local tapdir="`_portable_get_real_dirname "$binary"`"
+  local yqPath="$tapdir/Packages/ShellCompletion/yq"
+  local cachePath="$tapdir/.tap-completions.json"
+
+  shift
+
+  yq()
+  {
+    "${yqPath}" "$@"
   }
 
-  _tap_complete_fn ()
-  {
-    local binary="$1"
-    local tapdir="`_portable_get_real_dirname "$binary"`"
-    local yqPath="$tapdir/Packages/ShellCompletion/yq"
-    local cachePath="$tapdir/.tap-completions.json"
+  if [ ! -x "$yqPath" ]; then 
+    # We cannot do anything if jq is not installed. We cannot even give an error.
+    # This is probably happening because the plugin is not installed.
+    return;
+  fi
 
-    shift
+  if [ ! -f "$cachePath" ]; then
+    # if the cache does not exist it should be created
+    "${binary}" completion regenerate > /dev/null
+  fi
 
-    _tap_json()
-    {
-      "${yqPath}" "$@"
-    }
-
-    if [ ! -x "$yqPath" ]; then 
-      # We cannot do anything if jq is not installed. We cannot even give an error.
-      # This is probably happening because the plugin is not installed.
-      return;
+  _buildQuery() {
+    local query="."
+    for word in "$@";
+    do
+      if [[ $word == -* ]]; then
+        break;
       fi
 
-      if [ ! -f "$cachePath" ]; then
-        # if the cache does not exist it should be created
-        "${binary}" completion regenerate > /dev/null
-        fi
+      query="$query | .Completions[] | select(.Name == \"$word\")"
+    done
+    echo "$query"
+  }
 
-
-        _buildQuery() {
-          local query=""
-          for word in "$@";
-          do
-            if [[ $word == -* ]]; then
-              break;
-            fi
-
-            if [ ! "$query" = "" ]; then
-              query="$query | "
-            fi
-            query="$query .Completions[] | select(.Name == \"$word\")"
-          done
-          echo "$query"
-        }
-
-        local query="$(_buildQuery $@)"
-        local node="$(_tap_json "$query" "$cachePath")"
+  local query="$(_buildQuery $@)"
 
   # the previous word on the line
   local args=($@)
   if [ "$COMP_CWORD" = "" ]; then
     COMP_CWORD="${#args[@]}"
   fi
+
   local previousWord="${COMP_WORDS[$(($COMP_CWORD - 1))]}"
   if [[ "$previousWord" == -* ]]; then
-    local flagopts=($(echo "$node" | _tap_json ".FlagCompletions[] | select (\"-\" + .ShortName == \"$previousWord\" or \"--\" + .LongName == \"$previousWord\") | [.Type, .SuggestedCompletions[]][] "))
+    query="$query | .FlagCompletions[] | select (\"-\" + .ShortName == \"$previousWord\" or \"--\" + .LongName == \"$previousWord\") | [.Type, .SuggestedCompletions[]][]"
+    local flagopts=($(yq "$query" "$cachePath"))
 
     # If the current flag is a bool, just continue since it requires no argument
     # otherwise we should only suggest completions for this flag and return
@@ -88,24 +84,25 @@ _portable_get_real_dirname() {
       printf "%s\n" "${flagopts[@]:1}"
       return
     fi
-    fi
+  fi
 
-    local candidates=($(echo "$node" | _tap_json "\"-\" + .FlagCompletions[].ShortName, \"--\" + .FlagCompletions[].LongName, .Completions[].Name" | grep -vx "\-*null"))
+  query="$query | (\"-\" + .FlagCompletions[].ShortName, \"--\" + .FlagCompletions[].LongName, .Completions[].Name)"
+  local candidates=($(yq "$query" "$cachePath" | grep -vx "\-*null"))
 
-    for flag in "${candidates[@]}"
-    do
-      echo "$flag"
-    done
-  }
+  for flag in "${candidates[@]}"
+  do
+    echo "$flag"
+  done
+}
 
-  function _tap_completions()
-  {
-    local IFS=$'\n'
-    local relevant="${COMP_WORDS[@]:0:$((COMP_CWORD))}"
-    local word="${COMP_WORDS[$COMP_CWORD]}"
-    local suggestions=($(compgen -W  "$(_tap_complete_fn ${relevant[@]})" -- "$word"))
-    COMPREPLY+=("${suggestions[@]}")
-  }
+function _tap_completions()
+{
+  local IFS=$'\n'
+  local relevant="${COMP_WORDS[@]:0:$((COMP_CWORD))}"
+  local word="${COMP_WORDS[$COMP_CWORD]}"
+  local suggestions=($(compgen -W  "$(_tap_complete_fn ${relevant[@]})" -- "$word"))
+  COMPREPLY+=("${suggestions[@]}")
+}
 
-  complete -o filenames -o default -o nosort -F _tap_completions tap -W
+complete -o filenames -o default -o nosort -F _tap_completions tap -W
 

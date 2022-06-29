@@ -28,8 +28,8 @@ $(GitVersion) - Gets the version from Git in the recommended format Major.Minor.
     <File Path="Packages/ShellCompletion/powershell/_tap.ps1" SourcePath="../../powershell/_tap.ps1" />
 
     <!-- Platform specific dependencies -->
-    <File Path="Packages/ShellCompletion/yq.exe" SourcePath="../native/yq_windows_amd64.exe" Condition="$(TargetPlatform) == Windows" />
-    <File Path="Packages/ShellCompletion/yq" SourcePath="../native/yq_linux_amd64" Condition="$(TargetPlatform) == Linux" />
+    <File Path="Packages/ShellCompletion/yq.exe" SourcePath="../../native/yq_windows_amd64.exe" Condition="$(TargetPlatform) == Windows" />
+    <File Path="Packages/ShellCompletion/yq" SourcePath="../../native/yq_linux_amd64" Condition="$(TargetPlatform) == Linux" />
   </Files>
 
   <Files Condition="$(TargetPlatform) == MacOS">
