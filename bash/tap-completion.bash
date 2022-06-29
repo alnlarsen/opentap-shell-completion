@@ -23,104 +23,97 @@ _portable_get_real_dirname() {
   else
     # We are on linux -- Use GNU Readline normally
     echo "$(dirname "$(readlink -f "$(which "$1")")")"
-  fi
-}
+    fi
+  }
 
-_tap_complete_fn ()
-{
-  local binary="$1"
-  local tapdir="`_portable_get_real_dirname "$binary"`"
-  local jqPath="$tapdir/Packages/ShellCompletion/jq"
-  local cachePath="$tapdir/.tap-completions.json"
-
-  shift
-
-  _tap_jq()
+  _tap_complete_fn ()
   {
-    # -M: no colors -c: compact (minified)
-    "${jqPath}" -M -c "$@"
-  }
+    local binary="$1"
+    local tapdir="`_portable_get_real_dirname "$binary"`"
+    local jqPath="$HOME/Downloads/yq_linux_amd64"
+    # local jqPath="$tapdir/Packages/ShellCompletion/jq"
+    local cachePath="$tapdir/.tap-completions.json"
 
-  if [ ! -x "$jqPath" ]; then 
-    # We cannot do anything if jq is not installed. We cannot even give an error.
-    # This is probably happening because the plugin is not installed.
-    return;
-  fi
+    shift
 
-  if [ ! -f "$cachePath" ]; then
-    # if the cache does not exist it should be created
-    "${binary}" completion regenerate > /dev/null
-  fi
+    _tap_json()
+    {
+      # -M: no colors -c: compact (minified)
+      # "${jqPath}" -M -c "$@"
+      "${jqPath}" "$@"
+    }
 
-
-  _buildQuery() {
-    local query=""
-    for word in "$@";
-    do
-      if [[ $word == -* ]]; then
-        break;
+    if [ ! -x "$jqPath" ]; then 
+      # We cannot do anything if jq is not installed. We cannot even give an error.
+      # This is probably happening because the plugin is not installed.
+      return;
       fi
 
-      if [ ! "$query" = "" ]; then
-        query="$query | "
-      fi
-      query="$query .Completions[] | select(.Name == \"$word\")"
-    done
-    echo "$query"
-  }
+      if [ ! -f "$cachePath" ]; then
+        # if the cache does not exist it should be created
+        "${binary}" completion regenerate > /dev/null
+        fi
 
-  local query="$(_buildQuery $@)"
 
-  local node="$(_tap_jq "$query" "$cachePath")"
-  local comp="$(echo "$node" | _tap_jq ".Completions[]")"
+        _buildQuery() {
+          local query=""
+          for word in "$@";
+          do
+            if [[ $word == -* ]]; then
+              break;
+            fi
+
+            if [ ! "$query" = "" ]; then
+              query="$query | "
+            fi
+            query="$query .Completions[] | select(.Name == \"$word\")"
+          done
+          echo "$query"
+        }
+
+        local query="$(_buildQuery $@)"
+        local node="$(_tap_json "$query" "$cachePath")"
 
   # the previous word on the line
   local args=($@)
-  local previousWord="${COMP_WORDS[$(($COMP_CWORD - 1))]}"
-  local flagnames=($(echo "$node" | _tap_jq ".FlagCompletions[].ShortName, .FlagCompletions[].LongName" | grep -vx null))
-
-  if [[ "$previousWord" == -* ]]; then
-    previousWord="${previousWord#-}"
-    previousWord="${previousWord#-}"
-    if printf "%s\n" ${flagnames[@]} | grep -x "\"$previousWord\"" > /dev/null; then
-      local currentFlag="" # ="$(echo "$node" | _tap_jq "select(.FlagCompletions))"
-      # shortname
-      local field="LongName"
-      if [ "${#previousWord}" = 1 ]; then
-        field="ShortName"
-      fi
-      currentFlag=($(echo "$node" | _tap_jq ".FlagCompletions[] | select(.$field == \"$previousWord\") | .Type, .SuggestedCompletions[] " )"")
-      if [ ! "${currentFlag[0]}" = "System.Boolean" ]; then
-        for s in "${currentFlag[@]:1}";
-        do
-          echo "$s"
-        done
-        return
-      fi
-    fi
+  if [ "$COMP_CWORD" = "" ]; then
+    COMP_CWORD="${#args[@]}"
   fi
+  local previousWord="${COMP_WORDS[$(($COMP_CWORD - 1))]}"
+  if [[ "$previousWord" == -* ]]; then
+    local oldIFS=$IFS
+    # temporarily change IFS to allow spaces in array
+    local IFS='
+    '
+    local flagopts=($(echo "$node" | _tap_json ".FlagCompletions[] | select (\"-\" + .ShortName == \"$previousWord\" or \"--\" + .LongName == \"$previousWord\") | [.Type, .SuggestedCompletions[]][] "))
+    IFS="$oldIFS"
 
-  for sn in "${flagnames[@]}"
-  do
-    # eval to strip a single layer of quotes
-    eval f=$sn
-    if [ ${#f} = 1 ]; then
-      echo "-$f"
-    else
-      echo "--$f"
+    # If the current flag is a bool, just continue since it requires no argument
+    # otherwise we should only suggest completions for this flag and return
+    if [ ! "${flagopts[0]}" = "System.Boolean" ]; then
+      # flag completions can contain spaces. Whitespace should be escaped in the suggestions
+      # compopt -o filenames
+      printf "%s\n" "${flagopts[@]:1}"
+      return
     fi
-  done
+    fi
 
-  echo "$(echo "$comp" | _tap_jq ".Name")"
-}
+    local candidates=($(echo "$node" | _tap_json "\"-\" + .FlagCompletions[].ShortName, \"--\" + .FlagCompletions[].LongName, .Completions[].Name" | grep -vx "\-*null"))
 
-function _tap_completions()
-{
-  local relevant="${COMP_WORDS[@]:0:$((COMP_CWORD))}"
-  local word="${COMP_WORDS[$COMP_CWORD]}"
-  local suggestions=($(compgen -W "$(_tap_complete_fn ${relevant[@]})" -- "$word"))
-  COMPREPLY+=("${suggestions[@]}")
-}
+    for flag in "${candidates[@]}"
+    do
+      echo "$flag"
+    done
+  }
 
-complete -F _tap_completions tap
+  function _tap_completions()
+  {
+    local relevant="${COMP_WORDS[@]:0:$((COMP_CWORD))}"
+    local word="${COMP_WORDS[$COMP_CWORD]}"
+    local suggestions=($(compgen -o filenames -W  "$(_tap_complete_fn ${relevant[@]})" -- "$word"))
+
+    COMPREPLY+=("${suggestions[@]}")
+  }
+
+  complete -o filenames -o default -o nosort -F _tap_completions tap -W
 
