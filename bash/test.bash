@@ -1,9 +1,11 @@
 #!/bin/bash
 
-source ./tap-completion.bash
+. ./tap-completion.bash
 
+COMP_WORDS=(../bin/Debug/tap completion regenerate --browsable x)
+COMP_CWORD="4"
 
-COMP_CWORD=2
-_tap_complete_fn tap package list --architecture x
+IFS=$'\n'
+_tap_complete_fn ${COMP_WORDS[@]}
 
-_buildQuery package list hello wowoow
+# _buildQuery package list hello wowoow

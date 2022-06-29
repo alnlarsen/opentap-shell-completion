@@ -70,6 +70,7 @@ jobs:
       - name: Build
         env:
           TargetPlatform: ${{ matrix.TargetPlatform }}
+          Architecture: x64
         run: dotnet build -c Release
       - name: Copy Package
         run: cp bin/Release/ShellCompletion*.TapPackage ShellCompletion.${{ needs.GetVersion.outputs.GitVersion }}.${{ matrix.TargetPlatform}}.TapPackage
@@ -79,3 +80,4 @@ jobs:
           name: build
           retention-days: 5
           path: "ShellCompletion*.TapPackage"
+
