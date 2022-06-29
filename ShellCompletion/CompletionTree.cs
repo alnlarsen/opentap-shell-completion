@@ -22,19 +22,19 @@ namespace ShellCompletion
 
     public class FlagCompletion
     {
-        public string Name { get; set; }
-        public string ShortName { get; set; } = null;
-        public string LongName { get; set; } = null;
-        public string Description { get; set; }
-        public string Type { get; set; }
-        public string[] SuggestedCompletions { get; set; } = null;
+        public string Name { get; set; } = "";
+        public string ShortName { get; set; } = "";
+        public string LongName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string[] SuggestedCompletions { get; set; } = Array.Empty<string>();
     }
 
     public class CompletionTree
     {
         private static TraceSource log = Log.CreateSource(nameof(CompletionRegenerator));
         public string Name { get; set; }
-        public string Description { get; set; }
+        public string Description { get; set; } = "";
         public bool IsTerminal { get; set; } = false;
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace ShellCompletion
                         var comp = new CompletionTree(td, withUnbrowsable)
                         {
                             Name = disp?.Name ?? td.Name,
-                            Description = disp?.Description,
+                            Description = disp?.Description ?? td.ToString(),
                             IsTerminal = true
                         };
                         root.Completions.Add(comp);
