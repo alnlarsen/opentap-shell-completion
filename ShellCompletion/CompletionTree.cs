@@ -107,7 +107,13 @@ namespace ShellCompletion
                 root.Completions.Add(subtree);
             }
 
-
+            if (!isTerminal) 
+            {
+              root.Description = "[ " + string.Join(", ", root.Completions.Select(c => c.Name)) + " ]";
+              // non-terminal completions are groups that do not have completions.
+              // Since they are not groups, there is not type or instance from which a description can be derived.
+              // Rather than an empty description, let's show its subcommands since any description is better than no description.
+            }
 
             return root;
         }
