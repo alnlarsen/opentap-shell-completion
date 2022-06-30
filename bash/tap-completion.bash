@@ -86,13 +86,10 @@ _tap_complete_fn () {
     fi
   fi
 
-  query="$query | (\"-\" + .FlagCompletions[].ShortName, \"--\" + .FlagCompletions[].LongName, .Completions[].Name)"
-  local candidates=($(yq "$query" "$cachePath" | grep -vx "\-*null"))
+  query="$query | (\"-\" + (.FlagCompletions[].ShortName | select(. != null)), \"--\" + (.FlagCompletions[].LongName | select(. != null)), .Completions[].Name)"
+  local candidates=($(yq "$query" "$cachePath"))
 
-  for flag in "${candidates[@]}"
-  do
-    echo "$flag"
-  done
+  printf "%s\n" "${candidates[@]}"
 }
 
 function _tap_completions()
