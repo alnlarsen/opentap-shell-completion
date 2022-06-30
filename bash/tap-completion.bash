@@ -27,6 +27,11 @@ _portable_get_real_dirname() {
 }
 
 _tap_complete_fn () {
+  if [ ! -x "$1" ]; then
+    # fail fast when $1 is not an executable
+    return;
+  fi
+
   local binary="$1"
   local tapdir="`_portable_get_real_dirname "$binary"`"
   local yqPath="$tapdir/Packages/ShellCompletion/yq"
