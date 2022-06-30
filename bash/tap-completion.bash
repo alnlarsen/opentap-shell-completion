@@ -78,8 +78,8 @@ _tap_complete_fn () {
 
   local previousWord="${COMP_WORDS[$(($COMP_CWORD - 1))]}"
   if [[ "$previousWord" == -* ]]; then
-    query="$query | .FlagCompletions[] | select (\"-\" + .ShortName == \"$previousWord\" or \"--\" + .LongName == \"$previousWord\") | [.Type, .SuggestedCompletions[]][]"
-    local flagopts=($(yq "$query" "$cachePath"))
+    local flagquery="$query | .FlagCompletions[] | select (\"-\" + .ShortName == \"$previousWord\" or \"--\" + .LongName == \"$previousWord\") | [.Type, .SuggestedCompletions[]][]"
+    local flagopts=($(yq "$flagquery" "$cachePath"))
 
     # If the current flag is a bool, just continue since it requires no argument
     # otherwise we should only suggest completions for this flag and return

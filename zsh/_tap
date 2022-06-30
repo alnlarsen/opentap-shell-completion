@@ -1,21 +1,5 @@
 #compdef tap
 
-# Alias python to python3 if python3 does not exist
-if ! command -v python3 >&/dev/null; then
-  python3() { python "$@" }
-fi
-
-trace(){
-  return
-  local nicecounter=0
-  local l
-  for l in "${(@f)@}"
-  do 
-    echo "$nicecounter: $l" >> $HOME/tapcomp.log
-    nicecounter=$((nicecounter + 1))
-  done
-}
-
 _portable_get_real_dirname() {
   if [[ $(uname) == Darwin ]]; then
     # Mac uses BSD readlink which supports different flags
@@ -40,36 +24,98 @@ _portable_get_real_dirname() {
     # We are on linux -- Use GNU Readline normally
     echo "$(dirname "$(readlink -f "$(which "$1")")")"
   fi
+}
 
+_tap_complete_fn () {
+  local IFS=$'\n'
+  if [ ! -x "$1" ]; then
+    # fail fast when $1 is not an executable
+    return;
+  fi
+
+  local binary="$1"
+  local tapdir="`_portable_get_real_dirname "$binary"`"
+  local yqPath="$tapdir/Packages/ShellCompletion/yq"
+  local cachePath="$tapdir/.tap-completions.json"
+
+  shift 
+  local args=($@)
+
+  yq()
+  {
+    "${yqPath}" "$@"
+  }
+
+  if [ ! -x "$yqPath" ]; then 
+    # We cannot do anything if jq is not installed. We cannot even give an error.
+    # This is probably happening because the plugin is not installed.
+    return;
+  fi
+
+  if [ ! -f "$cachePath" ]; then
+    # if the cache does not exist it should be created
+    "${binary}" completion regenerate > /dev/null
+  fi
+
+  local query="."
+  for word in ${args[@]};
+  do
+    if [[ "$word" == -* ]]; then
+      break;
+    fi
+    query="$query | .Completions[] | select(.Name == \"$word\")"
+  done
+
+  # the previous word on the line
+  local previousWord="${args[$CURRENT-1]}"
+
+  if [[ "$previousWord" == -* ]]; then
+    local flagQuery="$query | .FlagCompletions[] | select (\"-\" + .ShortName == \"$previousWord\" or \"--\" + .LongName == \"$previousWord\") | [.Type, .SuggestedCompletions[]][]"
+    local flagopts=($(yq "$flagQuery" "$cachePath"))
+
+    # If the current flag is a bool, just continue since it requires no argument
+    # otherwise we should only suggest completions for this flag and return
+    if [ ! "$flagopts" = "System.Boolean" ]; then
+      printf "%s\n" "${flagopts[@]:1}"
+      return
+    fi
+  fi
+
+  local joinedDescription="( .Description // .Type |= sub(\"\n\", \" \") | \":\" + .Description // .Type )"
+  local shortnameQuery="   ( .FlagCompletions[] | select(.ShortName != null ) | \"-\" + .ShortName + $joinedDescription ) "
+  local longnameQuery="    ( .FlagCompletions[] | select(.LongName  != null ) | \"--\" + .LongName + $joinedDescription ) "
+  local completionsQuery=" ( .Completions[] | .Name + $joinedDescription  ) "
+  query="$query | ( $shortnameQuery , $longnameQuery , $completionsQuery ) "
+
+  local candidates=($(yq "$query" "$cachePath"))
+
+  printf "%s\n" "${candidates[@]}"
 }
 
 _tap_subcommands(){
-  trace "current = $CURRENT"
   local binary="$words[1]"
-  local tapdir="`_portable_get_real_dirname "$binary"`"
-  local scriptPath="$tapdir/Packages/ShellCompletion/completer.py"
+  local line
 
-  if ! test -f "$scriptPath"; then
-    # plugin is not installed. fail quickly
+  # hack to populate line
+  _arguments '*::arg:->args'
+  local relevant=(${${line[@]:0:$((CURRENT - 1))}})
+
+  declare -a array_of_lines
+  array_of_lines=("${(@f)$(_tap_complete_fn "$binary" ${relevant[@]})}")
+
+  # Avoid suggesting anything if the string is just whitespace
+  if [[ "${array_of_lines[@]}" = *[![:space:]]* ]]; then
+    _describe 'command' array_of_lines 
+  fi
+}
+
+_tap(){
+  if [ ! -x "$words[1]" ]; then
     return
   fi
 
-  trace "binary = $binary"
-  trace "tapdir = $tapdir"
+  local IFS=$'\n'
 
-  local line
-  local context
-  trace "context = $contex"
-  # hack to populate line
-  _arguments '*::arg:->args'
-  trace "line = $line"
-  local -a array_of_lines
-  array_of_lines=("${(@f)$(python3 "$scriptPath" "$tapdir" zsh $CURRENT $line)}")
-  trace "${(@f)array_of_lines}"
-  _describe 'command' array_of_lines 
-
-}
-_tap(){
   # always suggest files 
   _alternative "files:complete files:_files"
   _arguments '*:args:_tap_subcommands'
