@@ -30,6 +30,44 @@ _portable_get_real_dirname() {
   fi
 }
 
+_tap_hardcoded_completions () {
+  local tapdir="$1"
+
+  shift
+  local words=($@)
+  local currentWord="${words[$CURRENT]}"
+
+  _package_comp () {
+    local words=($@)
+    local w1=$words[1]
+
+    case "$w1" in
+      install)
+        echo "InstallThisPackage:We are in the installing state =)"
+        return 1
+        ;;
+      uninstall)
+        # Parse the package names and descriptions of every package in the '$TAPDIR/Packages/**/package.xml directory'
+        printf "%s\n" "$(yq -p=xml  '.Package.+Name + ":" + ( .Package.Description.+content | sub("\n", " ") )' $tapdir/Packages/**/package.xml | grep -vx "\-\-\-")"
+        return 1
+        ;;
+    esac
+
+    return 0
+  }
+
+  local w1=$words[1]
+
+  case "$w1" in
+    package)
+      _package_comp "${words[@]:1:${#words[@]}}"
+      return $?
+      ;;
+  esac
+
+
+}
+
 _tap_complete_fn () {
   local IFS=$'\n'
   if [ ! -x "$1" ]; then
@@ -94,6 +132,8 @@ _tap_complete_fn () {
     fi
   fi
 
+  _tap_hardcoded_completions "$tapdir" "${args[@]}"
+
   local joinedDescription="( .Description // .Type |= sub(\"\n\", \" \") | \":\" + .Description // .Type )"
   local shortnameQuery="   ( .FlagCompletions[] | select(.ShortName != null ) | \"-\" + .ShortName + $joinedDescription ) "
   local longnameQuery="    ( .FlagCompletions[] | select(.LongName  != null ) | \"--\" + .LongName + $joinedDescription ) "
@@ -110,29 +150,17 @@ _tap_complete_fn () {
   return 0;
 }
 
-_tap_hardcoded_commands () {
-  return 1;
-}
-
 _tap_subcommands(){
   local binary="$words[1]"
   local line
   _arguments "*::args:->args"
-
-  # First hardcode builtin commands
-  # _tap_hardcoded_commands will return 0 if it has already suggested the appropriate files
-  _tap_hardcoded_commands
-  local suggestFiles=$?
 
   local relevant=(${${line[@]:0:$((CURRENT - 1))}})
 
   declare -a array_of_lines
   # _tap_complete_fn sets exit code to 1 if files should be suggested
   array_of_lines=($(_tap_complete_fn "$binary" ${relevant[@]}))
-  local ret=$?
-  if [ $suggestFiles = 1 ]; then
-    suggestFiles=$ret
-  fi
+  local suggestFiles=$?
 
   # Avoid suggesting anything if the string is just whitespace
   if [[ "${array_of_lines[@]}" = *[![:space:]]* ]]; then
@@ -140,7 +168,7 @@ _tap_subcommands(){
   fi
 
   if [ $suggestFiles = 1 ]; then
-    _alternative "files:complete files:_files"
+    _files
   fi
 }
 
