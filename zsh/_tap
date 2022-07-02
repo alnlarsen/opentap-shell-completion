@@ -1,5 +1,9 @@
 #compdef tap
 
+_trace() {
+  echo "$@" >> ~/tapcomp.log
+}
+
 _portable_get_real_dirname() {
   if [[ $(uname) == Darwin ]]; then
     # Mac uses BSD readlink which supports different flags
@@ -63,7 +67,13 @@ _tap_complete_fn () {
     if [[ "$word" == -* ]]; then
       break;
     fi
-    query="$query | .Completions[] | select(.Name == \"$word\")"
+    # Here we save the most immediate parent in $fallback in cases where e.g. an unnamed argument was specified
+    # Without the fallback we would not be able to continue suggesting flags after e.g. 
+    # tap package install CSV --!! or
+    # tap run ./a.TapPlan --!!
+    # This also means that currently we will keep suggesting invalid commands after 'tap tap tap tap -> package'
+    # We could do more to validate the arguments here.
+    query="$query | ( . as \$fallback | .Completions[] | select(.Name == \"$word\") | . // \$fallback )"
   done
 
   # the previous word on the line
@@ -77,7 +87,10 @@ _tap_complete_fn () {
     # otherwise we should only suggest completions for this flag and return
     if [ ! "$flagopts" = "System.Boolean" ]; then
       printf "%s\n" "${flagopts[@]:1}"
-      return
+      if [[ "$flagopts" == *"System.String"* ]]; then
+        return 1;
+      fi
+      return 0;
     fi
   fi
 
@@ -85,39 +98,60 @@ _tap_complete_fn () {
   local shortnameQuery="   ( .FlagCompletions[] | select(.ShortName != null ) | \"-\" + .ShortName + $joinedDescription ) "
   local longnameQuery="    ( .FlagCompletions[] | select(.LongName  != null ) | \"--\" + .LongName + $joinedDescription ) "
   local completionsQuery=" ( .Completions[] | .Name + $joinedDescription  ) "
-  query="$query | ( $shortnameQuery , $longnameQuery , $completionsQuery ) "
+  query="$query | ( .UnnamedCompletion.Type, $shortnameQuery , $longnameQuery , $completionsQuery ) "
 
   local candidates=($(yq "$query" "$cachePath"))
+  printf "%s\n" "${candidates[@]:1:${#candidates[@]}}"
 
-  printf "%s\n" "${candidates[@]}"
+  if [[ "$candidates" == *"System.String"* ]]; then
+    return 1;
+  fi
+
+  return 0;
+}
+
+_tap_hardcoded_commands () {
+  return 1;
 }
 
 _tap_subcommands(){
   local binary="$words[1]"
   local line
+  _arguments "*::args:->args"
 
-  # hack to populate line
-  _arguments '*::arg:->args'
+  # First hardcode builtin commands
+  # _tap_hardcoded_commands will return 0 if it has already suggested the appropriate files
+  _tap_hardcoded_commands
+  local suggestFiles=$?
+
   local relevant=(${${line[@]:0:$((CURRENT - 1))}})
 
   declare -a array_of_lines
-  array_of_lines=("${(@f)$(_tap_complete_fn "$binary" ${relevant[@]})}")
+  # _tap_complete_fn sets exit code to 1 if files should be suggested
+  array_of_lines=($(_tap_complete_fn "$binary" ${relevant[@]}))
+  local ret=$?
+  if [ $suggestFiles = 1 ]; then
+    suggestFiles=$ret
+  fi
 
   # Avoid suggesting anything if the string is just whitespace
   if [[ "${array_of_lines[@]}" = *[![:space:]]* ]]; then
     _describe 'command' array_of_lines 
   fi
+
+  if [ $suggestFiles = 1 ]; then
+    _alternative "files:complete files:_files"
+  fi
 }
 
 _tap(){
+  words[1]="$(which "$words[1]" 2> /dev/null)"
   if [ ! -x "$words[1]" ]; then
     return
   fi
 
   local IFS=$'\n'
 
-  # always suggest files 
-  _alternative "files:complete files:_files"
-  _arguments '*:args:_tap_subcommands'
+  _tap_subcommands
 }
 

@@ -27,6 +27,7 @@ namespace ShellCompletion
         public string LongName { get; set; } = "";
         public string Description { get; set; } = "";
         public string Type { get; set; } = "";
+        public bool IsCollection { get; set; } = false;
         public string[] SuggestedCompletions { get; set; } = Array.Empty<string>();
     }
 
@@ -41,9 +42,9 @@ namespace ShellCompletion
         /// These completions are hardcoded because they are not actually part of the API, but are hardcoded by the OpenTAP
         /// CLIActionExecutor and argument parser.
         /// </summary>
-        public List<FlagCompletion> FlagCompletions { get; set; } = new List<FlagCompletion>
-        {
-        };
+        public List<FlagCompletion> FlagCompletions { get; set; } = new List<FlagCompletion>();
+
+        public FlagCompletion UnnamedCompletion { get; set; }
 
         public List<CompletionTree> Completions { get; set; } = new List<CompletionTree>();
 
@@ -107,12 +108,12 @@ namespace ShellCompletion
                 root.Completions.Add(subtree);
             }
 
-            if (!isTerminal) 
+            if (!isTerminal)
             {
-              root.Description = "[ " + string.Join(", ", root.Completions.Select(c => c.Name)) + " ]";
-              // non-terminal completions are groups that do not have completions.
-              // Since they are not groups, there is not type or instance from which a description can be derived.
-              // Rather than an empty description, let's show its subcommands since any description is better than no description.
+                // non-terminal completions are groups that do not have completions.
+                // Since they are not groups, there is not type or instance from which a description can be derived.
+                // Rather than an empty description, let's show its subcommands since any description is better than no description.
+                root.Description = "[ " + string.Join(", ", root.Completions.Select(c => c.Name)) + " ]";
             }
 
             return root;
@@ -148,18 +149,32 @@ namespace ShellCompletion
                 if (member.Readable == false || member.Writable == false)
                     continue;
 
+                var mem = lookup[member.Name].FirstOrDefault();
+                var isCollection = mem.Get<ICollectionAnnotation>() != null;
+                string[] suggestions = null;
+                try
+                {
+                    suggestions = GetAvailableValues(mem);
+                }
+                catch
+                {
+                    log.Warning($"Error while parsing available / suggested values for member {member.Name}.");
+                }
+
                 var disp = member.GetDisplayAttribute();
                 var unnamedCli = member.GetAttribute<UnnamedCommandLineArgument>();
                 if (unnamedCli != null)
                 {
-                    FlagCompletions.Add(new FlagCompletion()
+                    this.UnnamedCompletion = new FlagCompletion()
                     {
                         Name = member.Name,
                         LongName = null,
                         ShortName = null,
                         Type = member.TypeDescriptor.Name,
+                        SuggestedCompletions = suggestions,
+                        IsCollection = isCollection
+                    };
 
-                    });
                     continue;
                 }
 
@@ -173,44 +188,6 @@ namespace ShellCompletion
                 if (cli == null) continue;
                 if (!withUnbrowsable && cli.Visible == false) continue;
 
-                var suggestions = new List<string>();
-
-                try
-                {
-                    var mem = lookup[member.Name].FirstOrDefault();
-
-                    // first add AvailableValues
-                    var available = mem.Get<IAvailableValuesAnnotationProxy>()?.AvailableValues;
-                    if (available != null)
-                    {
-                        foreach (var avail in available)
-                        {
-                            var sval = avail.Get<IStringValueAnnotation>()?.Value ?? avail.Get<IObjectValueAnnotation>()?.ToString();
-                            if (!string.IsNullOrWhiteSpace(sval))
-                                suggestions.Add(sval);
-                        }
-                    }
-
-                    // then add suggested values
-                    available = mem.Get<ISuggestedValuesAnnotationProxy>()?.SuggestedValues;
-                    if (available != null)
-                    {
-                        suggestions.AddRange(available.Cast<object>().Select(v => v.ToString()));
-                        foreach (var avail in available)
-                        {
-                            var sval = avail.Get<IStringValueAnnotation>()?.Value ?? avail.Get<IObjectValueAnnotation>()?.ToString();
-                            if (!string.IsNullOrWhiteSpace(sval))
-                                suggestions.Add(sval);
-                        }
-                    }
-
-                    suggestions = suggestions.Distinct().ToList();
-                }
-                catch
-                {
-                    log.Warning($"Error while parsing available / suggested values for member {member.Name}.");
-                }
-
                 var comp = new FlagCompletion()
                 {
                     Name = member.Name,
@@ -218,10 +195,42 @@ namespace ShellCompletion
                     ShortName = cli.ShortName,
                     Description = cli.Description,
                     Type = member.TypeDescriptor.Name,
-                    SuggestedCompletions = suggestions.Any() ? suggestions.ToArray() : null
+                    SuggestedCompletions = suggestions,
+                    IsCollection = isCollection
                 };
                 FlagCompletions.Add(comp);
             }
+        }
+
+        private string[] GetAvailableValues(AnnotationCollection mem)
+        {
+            var suggestions = new List<string>();
+            // first add AvailableValues
+            var available = mem.Get<IAvailableValuesAnnotationProxy>()?.AvailableValues;
+            if (available != null)
+            {
+                foreach (var avail in available)
+                {
+                    var sval = avail.Get<IStringValueAnnotation>()?.Value ?? avail.Get<IObjectValueAnnotation>()?.ToString();
+                    if (!string.IsNullOrWhiteSpace(sval))
+                        suggestions.Add(sval);
+                }
+            }
+
+            // then add suggested values
+            available = mem.Get<ISuggestedValuesAnnotationProxy>()?.SuggestedValues;
+            if (available != null)
+            {
+                suggestions.AddRange(available.Cast<object>().Select(v => v.ToString()));
+                foreach (var avail in available)
+                {
+                    var sval = avail.Get<IStringValueAnnotation>()?.Value ?? avail.Get<IObjectValueAnnotation>()?.ToString();
+                    if (!string.IsNullOrWhiteSpace(sval))
+                        suggestions.Add(sval);
+                }
+            }
+
+            return suggestions.Distinct().ToArray();
         }
 
         public string ToJson()
