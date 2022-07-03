@@ -30,30 +30,120 @@ _portable_get_real_dirname() {
   fi
 }
 
+# return values:
+# 0: don't care (let caller decide)
+# 1: complete all files 
+# 2: complete directories only 
+# 3: complete no files or directories
 _tap_hardcoded_completions () {
+  local dontcare=0
+  local complete_all=1 
+  local complete_dirs=2 
+  local complete_none=3
   local tapdir="$1"
 
   shift
   local words=($@)
-  local currentWord="${words[$CURRENT]}"
 
   _package_comp () {
-    local words=($@)
-    local w1=$words[1]
+    graphql () {
+      local IFS=$'\n'
+      local repo="$1"
+      # Base64 encode the string so it becomes a valid file path
+      local hashed=$(echo "$repo" | base64)
 
-    case "$w1" in
-      install)
-        echo "InstallThisPackage:We are in the installing state =)"
-        return 1
-        ;;
-      uninstall)
-        # Parse the package names and descriptions of every package in the '$TAPDIR/Packages/**/package.xml directory'
-        printf "%s\n" "$(yq -p=xml  '.Package.+Name + ":" + ( .Package.Description.+content | sub("\n", " ") )' $tapdir/Packages/**/package.xml | grep -vx "\-\-\-")"
-        return 1
-        ;;
-    esac
+      local cacheBase="/tmp/_tap_completion_cache"
+      if [ ! -d "$cacheBase" ]; then
+        mkdir -p "$cacheBase"
+      fi
 
-    return 0
+      local cacheFile="$cacheBase/$hashed"
+
+      restore_cache () {
+        _trace "restoring cache"
+        local query='
+        query Query { packages(distinctName: true, version: "Any") {
+        name
+        description }}'
+        curl -X POST "$repo/3.1/Query" -H "Accept: application/json" -H "Content-Type: application/x-www-form-urlencoded" -d "$query" 2> /dev/null > "$cacheFile"
+      }
+
+      if [ ! -f "$cacheFile" ]; then
+        _trace "cache missing"
+        restore_cache
+      else 
+        # refresh the cache if it is more than fifteen minutes old
+        local now=$( date +%s )
+        local mod_time=$(date -r "$cacheFile" +%s)
+        local diff=$(( now - mod_time ))
+        if (( diff > ( 60 * 15 ) )); then
+          _trace "cache outdated"
+          restore_cache
+        fi
+      fi
+
+      yq '.packages[] | ( (.name | sub(":", "\:")) + ":" + ( .description | sub("\n", " ")))' "$cacheFile"
+    }
+
+
+  local words=($@)
+  local w1=$words[1]
+
+  local descriptionQuery='( ( .Package.Description.+content // .Package.Description ) | sub("\n", " ") )'
+
+  case "$w1" in
+    install|download|show|list)
+      graphql "https://packages.opentap.io"
+      return $complete_all
+      ;;
+    uninstall|verify|test)
+      # Parse the package names and descriptions of every package in the '$TAPDIR/Packages/**/package.xml directory'
+      local packages=( $(yq -p=xml  ".Package.+Name + \":\" + $descriptionQuery" $tapdir/Packages/**/package.xml ))
+      # yq uses '---' as a separator between output from different files
+      for package in ${packages[@]/---}
+      do
+        if [ ! $package = --- ]; then
+          echo $package
+        fi
+      done
+
+      return $complete_none
+      ;;
+  esac
+
+  return 0
+}
+
+_run_comp() {
+  local words=($@)
+  local w1=$words[1]
+
+  local testplans=( $CURRENT_WORD*.TapPlan )
+  if [ ${#testplans[@]} = 0 ]; then
+    return $complete_dirs
+  fi
+
+  local descriptions=($(yq -p xml 'filename + ":" + ( .TestPlan.OpenTap*Description // "" | (("Base64=" + .Base64) // .) | sub("\n", " ") ) ' ${testplans[@]}))
+
+    # yq uses '---' as a separator between output from different files
+    for description in ${descriptions[@]/---}
+    do
+      local filename=${description%%:*}
+      local d=${description#*:}
+      # If the description is a Base64 encoding, decode it
+      if [[ "$d" == "Base64="* ]]; then
+        d="$(echo "${d##Base64=}" | base64 -d)"
+        # and replace any newlines with spaces
+        d="${d//$'\n'/ }"
+      fi
+      if [ ! "$d" = "" ]; then
+        echo "$filename:$d"
+      else
+        echo "$filename"
+      fi
+    done
+
+    return $complete_dirs
   }
 
   local w1=$words[1]
@@ -63,9 +153,10 @@ _tap_hardcoded_completions () {
       _package_comp "${words[@]:1:${#words[@]}}"
       return $?
       ;;
+    run)
+      _run_comp "${words[@]:1:${#words[@]}}"
+      return $?
   esac
-
-
 }
 
 _tap_complete_fn () {
@@ -85,7 +176,7 @@ _tap_complete_fn () {
 
   yq()
   {
-    "${yqPath}" "$@"
+    "${yqPath}" -M "$@"
   }
 
   if [ ! -x "$yqPath" ]; then 
@@ -133,6 +224,7 @@ _tap_complete_fn () {
   fi
 
   _tap_hardcoded_completions "$tapdir" "${args[@]}"
+  local filesHandled=$?
 
   local joinedDescription="( .Description // .Type |= sub(\"\n\", \" \") | \":\" + .Description // .Type )"
   local shortnameQuery="   ( .FlagCompletions[] | select(.ShortName != null ) | \"-\" + .ShortName + $joinedDescription ) "
@@ -142,6 +234,10 @@ _tap_complete_fn () {
 
   local candidates=($(yq "$query" "$cachePath"))
   printf "%s\n" "${candidates[@]:1:${#candidates[@]}}"
+
+  if [ ! $filesHandled = 0 ]; then
+    return $filesHandled
+  fi
 
   if [[ "$candidates" == *"System.String"* ]]; then
     return 1;
@@ -155,6 +251,7 @@ _tap_subcommands(){
   local line
   _arguments "*::args:->args"
 
+  local CURRENT_WORD="${line[CURRENT]}"
   local relevant=(${${line[@]:0:$((CURRENT - 1))}})
 
   declare -a array_of_lines
@@ -162,14 +259,19 @@ _tap_subcommands(){
   array_of_lines=($(_tap_complete_fn "$binary" ${relevant[@]}))
   local suggestFiles=$?
 
+  if [ $suggestFiles = 1 ]; then
+    _files
+  fi
+
+  if [ $suggestFiles = 2 ]; then
+    _files -/ 
+  fi
+
   # Avoid suggesting anything if the string is just whitespace
   if [[ "${array_of_lines[@]}" = *[![:space:]]* ]]; then
     _describe 'command' array_of_lines 
   fi
 
-  if [ $suggestFiles = 1 ]; then
-    _files
-  fi
 }
 
 _tap(){
@@ -179,7 +281,6 @@ _tap(){
   fi
 
   local IFS=$'\n'
-
   _tap_subcommands
 }
 
