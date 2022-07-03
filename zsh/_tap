@@ -1,7 +1,11 @@
 #compdef tap
 
 _trace() {
-  echo "$@" >> ~/tapcomp.log
+  local i=0
+  for item in $@; do
+    i=$((i+1))
+    echo "$i) $item" >> ~/tapcomp.log
+  done
 }
 
 _portable_get_real_dirname() {
@@ -46,9 +50,10 @@ _tap_hardcoded_completions () {
   local words=($@)
 
   _package_comp () {
-    graphql () {
+    queryRepo () {
       local IFS=$'\n'
       local repo="$1"
+
       # Base64 encode the string so it becomes a valid file path
       local hashed=$(echo "$repo" | base64)
 
@@ -57,28 +62,87 @@ _tap_hardcoded_completions () {
         mkdir -p "$cacheBase"
       fi
 
-      local cacheFile="$cacheBase/$hashed"
+      local cacheFile="$cacheBase/$hashed.json"
 
       restore_cache () {
         _trace "restoring cache"
-        local query='
-        query Query { packages(distinctName: true, version: "Any") {
-        name
-        description }}'
-        curl -X POST "$repo/3.1/Query" -H "Accept: application/json" -H "Content-Type: application/x-www-form-urlencoded" -d "$query" 2> /dev/null > "$cacheFile"
+
+        if [ -d "$repo" ]; then
+          # This is a file repo. We should parse the files instead of going online
+          local packages=( $repo/*.TapPackage )
+          local files=()
+          for p in ${packages[@]}; do
+            local n=$(basename $p)
+            local xml="$cacheBase/$n"
+            unzip -p $p 'Packages/*/package.xml' > $xml
+            files+=$xml
+          done
+
+          local items=($(yq -p xml ' .Package.+Name  + ":" + (.Package.Description.+content // .Package.Description) | sub("\n", " ")' ${files[@]}))
+          # items=${items[@]/---}
+
+          # write the items to the cache file in json format
+          echo '{ "packages": [ ' > "$cacheFile"
+          declare -A seen
+          for item in ${items[@]}; do
+            if [ $item = --- ]; then
+              continue
+            fi
+            local name=${item%%:*}
+            local description=${item#*:}
+            local wasSeen="${seen[$name]}"
+            if [ "$wasSeen" = 1 ]; then
+              continue 
+            else 
+              seen[$name]=1
+            fi
+            echo "
+  {
+    \"name\": \"$name\",
+    \"description\": \"$description\"
+  }," >> "$cacheFile"
+
+          done
+
+          echo "]}" >> "$cacheFile"
+          return
+        else
+          # if the directory does not exist, we interpret it as a URL and hope for the best
+          local query='
+          query Query { packages(distinctName: true, version: "Any") {
+          name
+          description }}'
+          curl -X POST "$repo/3.1/Query" -H "Accept: application/json" -H "Content-Type: application/x-www-form-urlencoded" -d "$query" 2> /dev/null > "$cacheFile"
+        fi
       }
 
       if [ ! -f "$cacheFile" ]; then
         _trace "cache missing"
         restore_cache
       else 
-        # refresh the cache if it is more than fifteen minutes old
-        local now=$( date +%s )
         local mod_time=$(date -r "$cacheFile" +%s)
-        local diff=$(( now - mod_time ))
-        if (( diff > ( 60 * 15 ) )); then
-          _trace "cache outdated"
-          restore_cache
+        # refresh the cache if it is more than fifteen minutes old
+        if [ -d $repo ]; then
+          # if it is a file repo, we can refresh if any file is newer than the cache
+          local packages=( $repo/*.TapPackage )
+
+          for package in ${packages[@]}; do
+            local pmod_time=$( date -r "$package" +%s)
+            if (( pmod_time > mod_time )); then
+              _trace "File $package was modified more recently than cache $cacheFile"
+              restore_cache
+              break 
+            fi
+          done
+        else
+          # if it is a http repo, refresh every 15 minutes
+          local now=$( date +%s )
+          local mod_time=$(date -r "$cacheFile" +%s)
+          local diff=$(( now - mod_time ))
+          if (( diff > ( 60 * 15 ) )); then
+            _trace "cache outdated"
+            restore_cache
+          fi
         fi
       fi
 
@@ -93,7 +157,33 @@ _tap_hardcoded_completions () {
 
   case "$w1" in
     install|download|show|list)
-      graphql "https://packages.opentap.io"
+      declare -a repos
+      for (( i=2; i < ${#words[@]}+1; i++ )); do
+        local w=${words[i]}
+        case "$w" in 
+          -r|--repository)
+            local r=${words[i+1]}
+            _trace "Repo: $r"
+            repos+=$r
+            ;;
+        esac
+      done
+
+      # If no repos are specified, use bench settings
+      if [ ${#repos[@]} = 0 ]; then 
+        local bench="$tapdir/Settings/Package Manager.xml"
+        if [ -f "$bench" ]; then
+          repos=($(yq -p xml '.PackageManagerSettings.Repositories[][].Url' "$bench" ))
+        else 
+          repos=("https://packages.opentap.io")
+        fi
+
+      fi
+
+      for repo in ${repos[@]}; do
+        queryRepo $repo
+      done
+       
       return $complete_all
       ;;
     uninstall|verify|test)
